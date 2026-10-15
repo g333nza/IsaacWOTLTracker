@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="See which secrets you are still missing in The Binding of Isaac: Wrath of the Lamb and Eternal Edition, and how to unlock each one. Works with your save file, entirely in your browser.">
+<title>Isaac secrets tracker</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23c99694' stroke='%230c0c0c' stroke-width='4'/%3E%3Ccircle cx='23' cy='28' r='4' fill='%230c0c0c'/%3E%3Ccircle cx='41' cy='28' r='4' fill='%230c0c0c'/%3E%3Cpath d='M22 42q10 8 20 0' fill='none' stroke='%230c0c0c' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat+Brush&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #e8e2d6;
+    --panel: #f5f1e8;
+    --panel-2: #efe9dd;
+    --ink: #2b2825;
+    --soft: #5c5750;
+    --line: #cdc5b6;
+    --accent: #962b2b;
+    --accent-ink: #fff;
+    --ok: #356b33;
+    --ok-bg: rgba(53, 107, 51, .12);
+    --shadow: 0 1px 0 rgba(0,0,0,.05), 0 8px 18px -12px rgba(0,0,0,.35);
+    --head: "Caveat Brush", "Segoe Print", "Bradley Hand", "Comic Sans MS", cursive;
+    --body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161412;
+      --panel: #221f1c;
+      --panel-2: #2a2622;
+      --ink: #ece6da;
+      --soft: #a8a094;
+      --line: #3b3630;
+      --accent: #d86a68;
+      --accent-ink: #1a1210;
+      --ok: #86c481;
+      --ok-bg: rgba(134, 196, 129, .13);
+      --shadow: 0 1px 0 rgba(0,0,0,.4), 0 8px 18px -12px rgba(0,0,0,.8);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-padding-top: 150px; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.5 var(--body); -webkit-text-size-adjust: 100%;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
+  header.top { padding: 40px 0 18px; }
+  h1 { font: 54px/1 var(--head); margin: 0; letter-spacing: .3px; }
+  .sub { margin: 6px 0 0; color: var(--soft); }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  /* upload */
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
+  #intro { padding: 22px; }
+  .drop {
+    display: block; width: 100%; padding: 34px 16px; text-align: center; cursor: pointer;
+    background: transparent; border: 2px dashed var(--line); border-radius: 10px; color: var(--ink);
+    transition: background .15s, border-color .15s;
+  }
+  .drop:hover, .drop.over { background: var(--panel-2); border-color: var(--accent); }
+  .drop strong { display: block; font: 30px/1.1 var(--head); margin-bottom: 4px; }
+  .drop span { color: var(--soft); font-size: 15px; }
+  input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  .fine { margin: 14px 2px 0; color: var(--soft); font-size: 14px; }
+  .err { margin-top: 14px; padding: 10px 14px; border-radius: 8px; border-left: 5px solid var(--accent); background: var(--panel-2); }
+  [hidden] { display: none !important; }
+
+  /* summary */
+  .summary { padding: 22px; display: grid; grid-template-columns: auto 1fr; gap: 6px 28px; align-items: center; margin-bottom: 16px; }
+  .count { font: 64px/1 var(--head); }
+  .count small { font-size: 32px; color: var(--soft); }
+  .bar { height: 12px; background: var(--line); border-radius: 6px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: var(--accent); border-radius: 6px; transition: width .3s; }
+  .groups { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 10px; }
+  .g { font-size: 14px; color: var(--soft); }
+  .g b { color: var(--ink); font-weight: 600; display: block; line-height: 1.25; }
+  .g .bar { height: 7px; margin-top: 6px; }
+  .chips { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+  .chip-s { font-size: 14px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 2px 12px; color: var(--soft); }
+  .chip-s b { color: var(--ink); }
+  .tabseg { margin: 0 0 14px; } .tabseg button { padding: 9px 22px; font-weight: 600; }
+  .loaded { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 14px; color: var(--soft); margin: 0 2px 14px; }
+  .linkbtn { background: none; border: 0; padding: 0; color: var(--accent); text-decoration: underline; cursor: pointer; }
+
+  /* toolbar */
+  .toolbar { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 10px 0; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
+  .toolrow { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--panel); }
+  .seg button { border: 0; background: transparent; padding: 8px 14px; cursor: pointer; font-size: 15px; color: var(--soft); }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button[aria-pressed=true] { background: var(--ink); color: var(--bg); }
+  .seg button .n { opacity: .75; margin-left: 4px; font-variant-numeric: tabular-nums; }
+  .field { flex: 1 1 220px; min-width: 0; }
+  input[type=search], select {
+    width: 100%; font: inherit; color: var(--ink); background: var(--panel);
+    border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; height: 40px;
+  }
+  select { width: auto; max-width: 100%; }
+  .resultline { margin: 8px 2px 0; font-size: 14px; color: var(--soft); }
+
+  /* list */
+  h2.grp { font: 38px/1.05 var(--head); margin: 38px 0 2px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  h2.grp small { font: 15px var(--body); color: var(--soft); }
+  h3.sec { font: 600 15px/1.2 var(--body); letter-spacing: .02em; text-transform: uppercase; color: var(--soft); margin: 22px 0 10px; display: flex; gap: 10px; align-items: center; }
+  h3.sec::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  h3.sec small { font-weight: 500; text-transform: none; letter-spacing: 0; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); gap: 10px; }
+  .card {
+    position: relative; display: grid; grid-template-columns: 28px 1fr; gap: 12px; padding: 12px 14px 12px 12px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+  }
+  .card.found { background: transparent; }
+  .card.found .name, .card.found .how { color: var(--soft); }
+  .card.info { background: transparent; border-style: dashed; }
+  .mark { width: 24px; height: 24px; border-radius: 50%; margin-top: 2px; border: 2px solid var(--line); display: grid; place-items: center; }
+  .card.miss .mark { border-color: var(--accent); }
+  .card.found .mark { background: var(--ok); border-color: var(--ok); color: var(--bg); }
+  .card.info .mark { border-style: dashed; }
+  .mark svg { width: 14px; height: 14px; }
+  .name { margin: 0; font: 600 16px/1.3 var(--body); padding-right: 44px; }
+  .type { display: inline-block; margin-left: 8px; font-weight: 400; font-size: 13px; color: var(--soft); }
+  .num { position: absolute; top: 12px; right: 14px; font-size: 13px; color: var(--soft); font-variant-numeric: tabular-nums; }
+  .how { margin: 3px 0 0; font-size: 15px; }
+  .note { margin: 4px 0 0; font-size: 13.5px; color: var(--soft); }
+  .meter { margin-top: 8px; font-size: 13.5px; color: var(--soft); }
+  .meter .bar { height: 7px; margin-top: 4px; max-width: 260px; }
+  .empty { padding: 40px 10px; text-align: center; color: var(--soft); }
+  footer { margin: 56px 0 40px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--soft); font-size: 14px; max-width: 72ch; }
+  footer p { margin: 0 0 8px; }
+
+  @media (max-width: 640px) {
+    h1 { font-size: 44px; }
+    .summary { grid-template-columns: 1fr; }
+    .groups { grid-template-columns: 1fr; gap: 10px; }
+    .seg { width: 100%; } .seg button { flex: 1; padding: 8px 6px; }
+    select { width: 100%; }
+    html { scroll-padding-top: 200px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .bar > i { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Isaac secrets tracker</h1>
+    <p class="sub">The Binding of Isaac: Wrath of the Lamb &amp; Eternal Edition. Find out which of the 113 secrets you are missing and how to unlock them.</p>
+  </header>
+
+  <section id="intro" class="panel">
+    <button type="button" class="drop" id="drop"><strong>Choose your save file</strong><span>or drop it here</span></button>
+    <input type="file" id="file" accept=".sol" aria-label="Choose your save file">
+    <p class="fine">Works with <b>so.sol</b> (the original Flash version) and <b>isaac_eternal_save.sol</b> (the Eternal Edition recompile). Your file is read in your browser and never leaves your device.</p>
+    <div class="err" id="err" hidden role="alert"></div>
+  </section>
+
+  <div id="app" hidden>
+    <div class="seg tabseg" role="group" aria-label="View">
+      <button type="button" data-v="secrets" aria-pressed="true">Secrets</button>
+      <button type="button" data-v="items" aria-pressed="false">Items</button>
+    </div>
+    <div class="loaded"><span>Loaded <b id="fname"></b></span><button type="button" class="linkbtn" id="again">Load another save</button></div>
+
+    <section class="summary panel" aria-label="Progress">
+      <div class="count"><span id="n">0</span> <small id="tot">/ 113 secrets</small></div>
+      <div>
+        <div class="bar" role="progressbar" aria-label="Secrets found" aria-valuemin="0" aria-valuemax="113" id="pb"><i id="pf"></i></div>
+      </div>
+      <div class="groups" id="groups"></div>
+      <div class="chips" id="chips"></div>
+    </section>
+
+    <div class="toolbar">
+      <div class="toolrow">
+        <div class="seg" role="group" aria-label="Show">
+          <button type="button" data-f="miss" aria-pressed="true">Missing<span class="n" id="c-miss"></span></button>
+          <button type="button" data-f="got" aria-pressed="false">Found<span class="n" id="c-got"></span></button>
+          <button type="button" data-f="all" aria-pressed="false">All<span class="n" id="c-all"></span></button>
+        </div>
+        <div class="field"><input type="search" id="q" placeholder="Search by name or #number (e.g. Cain, #12, 10-20)" aria-label="Search by name or number" autocomplete="off"></div>
+        <select id="cat" aria-label="Category"></select>
+      </div>
+      <div class="resultline" id="result" aria-live="polite"></div>
+    </div>
+
+    <div id="list"></div>
+  </div>
+
+  <footer>
+    <p>Order and names follow the community wiki's Secrets page. Method descriptions come from the wiki and from the game's own save data; a few entries on the wiki are disputed, and where they differ from the game's data the page says so.</p>
+    <p>Fan-made tool. Not affiliated with or endorsed by the creators or publishers of The Binding of Isaac.</p>
+  </footer>
+</div>
+
+<script>
+
+/* ===================== conversion core ===================== */
+(function (root) {
+  'use strict';
+  var NUMS = ['wins','rox','icer','shits','pill','dde','gams','bomb','deads','rocks'];
+  var ARRS = ['cols','lock','lockor','ulock','boss','lcomp','mwin'];
+  var enc = new TextEncoder(), dec = new TextDecoder();
+
+  function mkArr(length) { return { arr: true, length: length, items: new Map() }; }
+
+  /* ---------- Flash LSO (AMF0) reader ---------- */
+  function readFlash(buf) {
+    if (buf.length < 20 || buf[0] !== 0 || buf[1] !== 0xbf ||
+        String.fromCharCode(buf[6], buf[7], buf[8], buf[9]) !== 'TCSO') {
+      throw new Error('This is not a Flash .sol file.');
+    }
+    var dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength), p = 16;
+    function u16() { var v = dv.getUint16(p); p += 2; return v; }
+    function u32() { var v = dv.getUint32(p); p += 4; return v; }
+    function str() { var n = u16(); var s = dec.decode(buf.subarray(p, p + n)); p += n; return s; }
+    function val() {
+      var t = buf[p++];
+      if (t === 0) { var d = dv.getFloat64(p); p += 8; return d; }
+      if (t === 1) return buf[p++] !== 0;
+      if (t === 2) return str();
+      if (t === 5 || t === 6) return null;
+      if (t === 8) {
+        var a = mkArr(u32());
+        for (;;) {
+          var k = str();
+          if (k === '' && buf[p] === 9) { p++; break; }
+          var v = val();
+          if (/^\d+$/.test(k)) a.items.set(Number(k), v);
+        }
+        return a;
+      }
+      throw new Error('Unsupported data type (' + t + ') in the Flash file.');
+    }
+    str(); p += 4;                      // shared object name + AMF version
+    var props = {};
+    while (p < buf.length) { var key = str(); props[key] = val(); p++; }
+    return props;
+  }
+
+  /* ---------- Flash LSO (AMF0) writer ---------- */
+  function writeFlash(s) {
+    var out = [];
+    function b(x) { out.push(x & 255); }
+    function u16(x) { b(x >> 8); b(x); }
+    function u32(x) { b(x >>> 24); b(x >>> 16); b(x >>> 8); b(x); }
+    function key(k) { var e = enc.encode(k); u16(e.length); e.forEach(b); }
+    function num(x) { var t = new Uint8Array(8); new DataView(t.buffer).setFloat64(0, x); b(0); t.forEach(b); }
+    function val(v) {
+      if (v === true || v === false) { b(1); b(v ? 1 : 0); }
+      else if (typeof v === 'number') num(v);
+      else if (typeof v === 'string') { b(2); key(v); }
+      else b(6);
+    }
+    function prop(k, v) { key(k); val(v); b(0); }
+    function ecma(count, entries) {
+      b(8); u32(count);
+      entries.forEach(function (e) { key(String(e[0])); val(e[1]); });
+      u16(0); b(9);
+    }
+    function aprop(k, count, entries) { key(k); ecma(count, entries); b(0); }
+    function get(a, i) { return a.items.has(i) ? a.items.get(i) : null; }
+    function seq(a, fill) {
+      var r = [];
+      for (var i = 0; i < a.length; i++) {
+        var v = get(a, i);
+        r.push([i, v === null || v === undefined ? fill : v]);
+      }
+      return r;
+    }
+
+    prop('qqal', s.qqal === 'MEDIUM' || s.qqal == null ? 'AUTO' : s.qqal);
+    NUMS.forEach(function (k) { prop(k, s[k] || 0); });
+    // cols and boss: the Flash game stores 0 for "not collected / not beaten"
+    aprop('cols', s.cols.length, seq(s.cols, 0).map(function (e) { return [e[0], e[1] === true ? true : 0]; }));
+    aprop('lock', s.lock.length, seq(s.lock, null).map(function (e) { return [e[0], e[1] === true ? true : null]; }));
+    // lockor: keys written newest-first, like the original game does
+    var lo = [];
+    for (var i = s.lockor.length - 1; i >= 0; i--) if (s.lockor.items.has(i)) lo.push([i, s.lockor.items.get(i)]);
+    aprop('lockor', s.lockor.length, lo);
+    // ulock: same insertion order as the original (follows lockor), then any leftovers
+    var ul = [], seen = new Set();
+    lo.forEach(function (e) {
+      var id = Number(e[1]);
+      if (s.ulock.items.has(id) && !seen.has(id)) { seen.add(id); ul.push([id, s.ulock.items.get(id)]); }
+    });
+    Array.from(s.ulock.items.keys()).sort(function (x, y) { return x - y; }).forEach(function (id) {
+      if (!seen.has(id)) ul.push([id, s.ulock.items.get(id)]);
+    });
+    aprop('ulock', s.ulock.length, ul);
+    aprop('boss', s.boss.length, seq(s.boss, 0).map(function (e) { return [e[0], e[1] === true ? true : 0]; }));
+    aprop('lcomp', s.lcomp.length, seq(s.lcomp, 0));
+    aprop('mwin', s.mwin.length, seq(s.mwin, 0));
+    // fields the Eternal Edition doesn't save: filled with defaults
+    prop('cocks', true); prop('frog', 0); prop('left', 0);
+    prop('moff', s.moff === true);
+    prop('wind', 2); prop('hard', false);
+    prop('full', s.full === true);
+    prop('res', 5);
+
+    var body = out.slice(); out.length = 0;
+    b(0); b(0xbf);
+    var inner = [];
+    var save = out; out = inner;
+    'TCSO'.split('').forEach(function (c) { b(c.charCodeAt(0)); });
+    [0, 4, 0, 0, 0, 0].forEach(b);
+    u16(2); b(0x73); b(0x6f); u32(0);
+    out = save;
+    var total = inner.length + body.length;
+    u32(total);
+    return Uint8Array.from(out.concat(inner, body));
+  }
+
+  /* ---------- Eternal Edition (ISAACSO1) reader ---------- */
+  function readEternal(text) {
+    if (text.indexOf('ISAACSO1o') !== 0) throw new Error('This is not an Eternal Edition save.');
+    var p = 'ISAACSO1o'.length;
+    function int(term) { var e = text.indexOf(term, p); var n = parseInt(text.slice(p, e), 10); p = e + 1; return n; }
+    function val() {
+      var c = text[p++];
+      if (c === 'u') return null;
+      if (c === 't') return true;
+      if (c === 'f') return false;
+      if (c === 'n') { var e = text.indexOf(';', p); var x = parseFloat(text.slice(p, e)); p = e + 1; return x; }
+      if (c === 's') { var n = int(':'); var s = text.substr(p, n); p += n; return s; }
+      if (c === 'a') {
+        var len = int(':'), a = mkArr(len);
+        for (var i = 0; i < len; i++) { var v = val(); if (v !== null) a.items.set(i, v); }
+        return a;
+      }
+      throw new Error('Unexpected data "' + c + '" in the Eternal Edition save.');
+    }
+    var count = int(':'), s = {};
+    for (var i = 0; i < count; i++) {
+      var n = int(':'); var k = text.substr(p, n); p += n;
+      s[k] = val();
+    }
+    ARRS.forEach(function (k) { if (!s[k] || !s[k].arr) s[k] = mkArr(0); });
+    return s;
+  }
+
+  /* ---------- Eternal Edition (ISAACSO1) writer ---------- */
+  function writeEternal(f) {
+    function ser(v) {
+      if (v === null || v === undefined) return 'u';
+      if (v === true) return 't';
+      if (v === false) return 'f';
+      if (typeof v === 'number') return 'n' + v + ';';
+      if (typeof v === 'string') return 's' + v.length + ':' + v;
+      var r = 'a' + v.length + ':';
+      for (var i = 0; i < v.length; i++) r += ser(v.items.has(i) ? v.items.get(i) : null);
+      return r;
+    }
+    function dropZeros(a) {            // the recompile leaves empty slots as "undefined" instead of 0
+      var n = mkArr(a.length);
+      a.items.forEach(function (v, i) { if (!(typeof v === 'number' && v === 0)) n.items.set(i, v); });
+      return n;
+    }
+    var out = '';
+    function put(k, v) { out += k.length + ':' + k + ser(v); }
+    put('qqal', f.qqal === 'AUTO' || f.qqal == null ? 'MEDIUM' : f.qqal);
+    NUMS.forEach(function (k) { put(k, f[k] || 0); });
+    put('cols', dropZeros(f.cols));
+    put('lock', f.lock);
+    put('lockor', f.lockor);
+    put('ulock', f.ulock);
+    put('boss', dropZeros(f.boss));
+    put('lcomp', f.lcomp);
+    put('mwin', f.mwin);
+    put('moff', f.moff ? true : null);
+    put('full', !!f.full);
+    return 'ISAACSO1o20:' + out;
+  }
+
+  function summary(s) {
+    function trues(a) { var n = 0; a.items.forEach(function (v) { if (v === true) n++; }); return n; }
+    return { deaths: s.deads || 0, momKills: s.wins || 0, items: trues(s.cols), secrets: trues(s.lock) };
+  }
+
+  function detect(bytes) {
+    if (bytes.length > 9 && bytes[0] === 0 && bytes[1] === 0xbf) return 'flash';
+    if (dec.decode(bytes.subarray(0, 9)) === 'ISAACSO1o') return 'eternal';
+    return 'unknown';
+  }
+
+  root.IsaacConv = {
+    parse: function (bytes) { var k = detect(bytes); if (k === 'flash') return readFlash(bytes); if (k === 'eternal') return readEternal(dec.decode(bytes)); throw new Error('This is not an Isaac save file.'); },
+    toEternal: function (bytes) { var s = readFlash(bytes); return { data: enc.encode(writeEternal(s)), info: summary(s) }; },
+    toFlash: function (bytes) { var s = readEternal(dec.decode(bytes)); return { data: writeFlash(s), info: summary(s) }; },
+    detect: detect
+  };
+  if (typeof module !== 'undefined') module.exports = root.IsaacConv;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+var SECRETS = [{"id":13,"group":"In-Game Secrets List","cat":"Basic Progression Unlocks","title":"A Radioactive Spider","type":"Collectible item","how":"Finish The Basement"},{"id":14,"group":"In-Game Secrets List","cat":"Basic Progression Unlocks","title":"Spelunker","type":"Collectible item","how":"Finish The Caves"},{"id":4,"group":"In-Game Secrets List","cat":"Basic Progression Unlocks","title":"The Womb","type":"Opens level/chapter","how":"Finish The Depths: defeat the boss of The Depths 2 (Mom). Opens The Womb","note":"Unlocks together with the two other secrets from this boss kill."},{"id":19,"group":"In-Game Secrets List","cat":"Basic Progression Unlocks","title":"Monstro's Tooth","type":"Activated item","how":"Defeat every regular boss from The Basement"},{"id":21,"group":"In-Game Secrets List","cat":"Basic Progression Unlocks","title":"Lil Chubby","type":"Collectible item","how":"Defeat every regular boss from The Caves"},{"id":20,"group":"In-Game Secrets List","cat":"Basic Progression Unlocks","title":"Loki's Horns","type":"Collectible item","how":"Defeat every regular boss from The Depths"},{"id":16,"group":"In-Game Secrets List","cat":"Character and Combo Unlocks","title":"Cain","type":"Playable Character","how":"Get 55 pennies in a single playthrough","note":"Unlocks together with The Lucky Foot."},{"id":2,"group":"In-Game Secrets List","cat":"Character and Combo Unlocks","title":"The Lucky Foot","type":"Collectible item","how":"Get 55 pennies in a single playthrough","note":"Unlocks together with Cain."},{"id":15,"group":"In-Game Secrets List","cat":"Character and Combo Unlocks","title":"Magdalene","type":"Playable Character","how":"Get 7 health containers in a single playthrough","note":"Unlocks together with The Yum Heart."},{"id":1,"group":"In-Game Secrets List","cat":"Character and Combo Unlocks","title":"The Yum Heart","type":"Activated item","how":"Get 7 health containers in a single playthrough","note":"Unlocks together with Magdalene."},{"id":17,"group":"In-Game Secrets List","cat":"Character and Combo Unlocks","title":"Judas","type":"Playable Character","how":"Defeat the boss in The Womb 2 for the first time","note":"Unlocks together with The Book of Belial."},{"id":3,"group":"In-Game Secrets List","cat":"Character and Combo Unlocks","title":"The Book of Belial","type":"Activated item","how":"Defeat the boss in The Womb 2 for the first time","note":"Unlocks together with Judas."},{"id":41,"group":"In-Game Secrets List","cat":"Character and Combo Unlocks","title":"???","type":"Playable Character","how":"Defeat the boss in The Womb 2 for the tenth time","note":"Unlocks together with A Poop.","meter":{"stat":"wins","target":10,"label":"Mom kills"}},{"id":12,"group":"In-Game Secrets List","cat":"Character and Combo Unlocks","title":"A Poop","type":"Activated item","how":"Defeat the boss in The Womb 2 for the tenth time","note":"Unlocks together with ???.","meter":{"stat":"wins","target":10,"label":"Mom kills"}},{"id":8,"group":"In-Game Secrets List","cat":"Game Completion Unlocks","title":"A Noose","type":"Collectible item","how":"Defeat the boss in The Womb 2 for the second time","meter":{"stat":"wins","target":2,"label":"Mom kills"}},{"id":9,"group":"In-Game Secrets List","cat":"Game Completion Unlocks","title":"The Nail","type":"Activated item","how":"Defeat the boss in The Womb 2 for the third time","meter":{"stat":"wins","target":3,"label":"Mom kills"}},{"id":10,"group":"In-Game Secrets List","cat":"Game Completion Unlocks","title":"A Quarter","type":"Collectible item","how":"Defeat the boss in The Womb 2 for the fourth time","meter":{"stat":"wins","target":4,"label":"Mom kills"}},{"id":11,"group":"In-Game Secrets List","cat":"Game Completion Unlocks","title":"A Fetus In A Jar","type":"Collectible item","how":"Defeat the boss in The Womb 2 for the fifth time","meter":{"stat":"wins","target":5,"label":"Mom kills"}},{"id":42,"group":"In-Game Secrets List","cat":"Game Completion Unlocks","title":"Everything is Terrible!!!","type":"Difficulty Increase","how":"Defeat the boss in The Womb 2 for the sixth time","meter":{"stat":"wins","target":6,"label":"Mom kills"}},{"id":43,"group":"In-Game Secrets List","cat":"Game Completion Unlocks","title":"The Wafer","type":"Collectible item","how":"Defeat the boss in The Womb 2 for the seventh time","meter":{"stat":"wins","target":7,"label":"Mom kills"}},{"id":44,"group":"In-Game Secrets List","cat":"Game Completion Unlocks","title":"Money = Power","type":"Collectible item","how":"Defeat the boss in The Womb 2 for the eighth time","meter":{"stat":"wins","target":8,"label":"Mom kills"}},{"id":45,"group":"In-Game Secrets List","cat":"Game Completion Unlocks","title":"It Lives!","type":"New Boss","how":"Defeat the boss in The Womb 2 for the ninth time","meter":{"stat":"wins","target":9,"label":"Mom kills"}},{"id":26,"group":"In-Game Secrets List","cat":"Game Completion Unlocks","title":"A Cross","type":"Collectible item","how":"Defeat the boss in The Womb 2 with Magdalene"},{"id":27,"group":"In-Game Secrets List","cat":"Game Completion Unlocks","title":"A Bag of Pennies","type":"Collectible item","how":"Defeat the boss in The Womb 2 with Cain"},{"id":28,"group":"In-Game Secrets List","cat":"Game Completion Unlocks","title":"A Robo-Baby!","type":"Collectible item","how":"Defeat the boss in The Womb 2 with Judas"},{"id":38,"group":"In-Game Secrets List","cat":"Game Completion Unlocks","title":"The D6","type":"Activated item","how":"Defeat the boss in The Womb 2 with ???"},{"id":22,"group":"In-Game Secrets List","cat":"Special Bosses and Loot","title":"Something from the Future!","type":"New Boss","how":"Finish the Basement 25 times","note":"Some wiki pages list 42 boss kills in the Basement instead."},{"id":31,"group":"In-Game Secrets List","cat":"Special Bosses and Loot","title":"Little Steve","type":"Collectible item","how":"Defeat Steven"},{"id":23,"group":"In-Game Secrets List","cat":"Special Bosses and Loot","title":"Something Cute","type":"New Boss","how":"Finish The Caves 20 times"},{"id":32,"group":"In-Game Secrets List","cat":"Special Bosses and Loot","title":"Little C.H.A.D.","type":"Collectible item","how":"Defeat C.H.A.D. or the Headless Horseman"},{"id":24,"group":"In-Game Secrets List","cat":"Special Bosses and Loot","title":"Something Sticky","type":"New Boss","how":"Defeat the boss of The Depths 2 fifteen times","note":"Some wiki pages say \"finish The Depths 30 times\"."},{"id":30,"group":"In-Game Secrets List","cat":"Special Bosses and Loot","title":"Little Gish","type":"Collectible item","how":"Defeat Gish"},{"id":5,"group":"In-Game Secrets List","cat":"Special Bosses and Loot","title":"The Harbingers (new bosses)","type":"New Bosses","how":"Defeat the Boss in The Depths 2. Adds the Harbingers to the boss list","note":"Unlocks together with the two other secrets from this boss kill."},{"id":7,"group":"In-Game Secrets List","cat":"Special Bosses and Loot","title":"The Book of Revelations","type":"Activated item","how":"Defeat any Harbinger/Horseman"},{"id":6,"group":"In-Game Secrets List","cat":"Special Bosses and Loot","title":"A Cube of Meat","type":"Collectible item","how":"Defeat the Boss in The Depths 2","note":"Unlocks together with the two other secrets from this boss kill."},{"id":29,"group":"In-Game Secrets List","cat":"Special Bosses and Loot","title":"The Book of Sins","type":"Activated item","how":"Defeat all of the Seven Deadly Sins over multiple playthroughs"},{"id":18,"group":"In-Game Secrets List","cat":"Separate Task Based","title":"A Small Rock","type":"Collectible item","how":"Destroy 50 Rocks over multiple playthroughs"},{"id":35,"group":"In-Game Secrets List","cat":"Separate Task Based","title":"Mr. Mega!","type":"Collectible item","how":"Use 100 bombs over multiple playthroughs","note":"Some wiki pages say \"destroy 10 tinted rocks\" instead."},{"id":34,"group":"In-Game Secrets List","cat":"Separate Task Based","title":"A Halo","type":"Collectible item","how":"Defeat the boss in The Depths 2 or The Womb 2 by using the Bible"},{"id":47,"group":"In-Game Secrets List","cat":"Separate Task Based","title":"Mom's Contact","type":"Collectible item","how":"Collect Mom's Eye plus another Mom item in the same playthrough","note":"The game also accepts Mom's Knife, Mom's Bottle of Pills and Cat-o-nine-tails as the second item."},{"id":33,"group":"In-Game Secrets List","cat":"Separate Task Based","title":"A Gamekid","type":"Activated item","how":"Visit 10 Arcades over multiple playthroughs"},{"id":36,"group":"In-Game Secrets List","cat":"Separate Task Based","title":"Mom's Pill Bottle","type":"Activated item","how":"Use 20 Blood Donation Machines over multiple playthroughs"},{"id":37,"group":"In-Game Secrets List","cat":"Separate Task Based","title":"The Common Cold","type":"Collectible item","how":"Collect any two of Roid Rage, The Virus and Growth Hormones in the same playthrough"},{"id":25,"group":"In-Game Secrets List","cat":"Separate Task Based","title":"A Bandage","type":"Collectible item","how":"Defeat four Harbingers/Horsemen in a single playthrough"},{"id":48,"group":"In-Game Secrets List","cat":"Separate Task Based","title":"The Necronomicon","type":"Activated item","how":"Use the XIII Death Tarot Card 4 times over multiple playthroughs"},{"id":40,"group":"In-Game Secrets List","cat":"Separate Task Based","title":"The Parasite","type":"Collectible item","how":"Collect two of: Bob's Rotten Head, Brother Bobby, Dead Cat, Max's Head, Tammy's Head or Dead Bird in a single playthrough","note":"The game itself checks Max's Head, Tammy's Head, Bob's Rotten Head and Dead Cat."},{"id":39,"group":"In-Game Secrets List","cat":"Separate Task Based","title":"The Pinking Shears","type":"Activated item","how":"Die 100 times","meter":{"stat":"deads","target":100,"label":"Deaths"}},{"id":46,"group":"In-Game Secrets List","cat":"Separate Task Based","title":"The Bean","type":"Activated item","how":"Destroy 50 piles of poop over multiple playthroughs"},{"id":64,"group":"In-Game Secrets List","cat":"Separate Task Based","title":"A Lump of Coal!?","type":"Collectible item","how":"Defeat Krampus"},{"id":49,"group":"In-Game Secrets List","cat":"No Damage Achievements","title":"Basement Boy","type":"","how":"Finish the two Basement/Cellar levels without taking any damage (only the bosses need to die)"},{"id":50,"group":"In-Game Secrets List","cat":"No Damage Achievements","title":"Spelunker Boy","type":"","how":"Finish the two Caves/Catacombs levels without taking any damage (only the bosses need to die)"},{"id":51,"group":"In-Game Secrets List","cat":"No Damage Achievements","title":"Dark Boy","type":"","how":"Finish the two Depths/Necropolis levels without taking any damage (only the bosses need to die)"},{"id":52,"group":"In-Game Secrets List","cat":"No Damage Achievements","title":"Mama's Boy","type":"","how":"Finish the two Womb/Utero levels without taking any damage (only the bosses need to die)"},{"id":58,"group":"In-Game Secrets List","cat":"Halloween Update","title":"The Razor","type":"Activated item","how":"Defeat the boss in The Womb 2 with Eve"},{"id":55,"group":"In-Game Secrets List","cat":"Halloween Update","title":"Mom's Knife","type":"Collectible Item","how":"Kill Satan with Isaac"},{"id":57,"group":"In-Game Secrets List","cat":"Halloween Update","title":"Eve","type":"Playable Character","how":"Make 2 separate Devil Room deals in one playthrough","note":"Unlocks together with A Curse and A Dead Bird."},{"id":54,"group":"In-Game Secrets List","cat":"Halloween Update","title":"A Curse","type":"Collectible Item","how":"Make 2 separate Devil Room deals in one playthrough","note":"Unlocks together with Eve and A Dead Bird."},{"id":63,"group":"In-Game Secrets List","cat":"Halloween Update","title":"The Monster Manuel","type":"Activated Item","how":"Kill Satan with Judas"},{"id":56,"group":"In-Game Secrets List","cat":"Halloween Update","title":"A Dead Bird","type":"Collectible Item","how":"Make 2 separate Devil Room deals in one playthrough","note":"Unlocks together with A Curse and Eve."},{"id":60,"group":"In-Game Secrets List","cat":"Halloween Update","title":"A Bag of Bombs","type":"Collectible Item","how":"Kill Satan with Cain"},{"id":59,"group":"In-Game Secrets List","cat":"Halloween Update","title":"Guardian Angel","type":"Collectible Item","how":"Kill Satan with Maggy"},{"id":61,"group":"In-Game Secrets List","cat":"Halloween Update","title":"A Demon Baby!","type":"Collectible Item","how":"Kill Satan with Eve"},{"id":62,"group":"In-Game Secrets List","cat":"Halloween Update","title":"A Forget Me Now","type":"Activated/Consumable Item","how":"Kill Satan with ???"},{"id":53,"group":"In-Game Secrets List","cat":"Halloween Update","title":"Golden God!","type":"","how":"Collect 131/132 original items (Wrath of the Lamb items do not count) and unlock all secrets"},{"id":88,"group":"Wrath of the Lamb In-Game Secrets List","cat":"Characters","title":"Samson","type":"Playable Character","how":"Complete Depths 2 without taking 2 Treasure Room items (you can still enter the rooms)"},{"id":65,"group":"Wrath of the Lamb In-Game Secrets List","cat":"Game Completion Unlocks","title":"The D20!","type":"Activated Item","how":"Complete the Cathedral as Isaac"},{"id":66,"group":"Wrath of the Lamb In-Game Secrets List","cat":"Game Completion Unlocks","title":"The Crucifix","type":"Collectible Item","how":"Complete the Cathedral as Maggy"},{"id":67,"group":"Wrath of the Lamb In-Game Secrets List","cat":"Game Completion Unlocks","title":"Abel","type":"Collectible Item","how":"Complete the Cathedral as Cain"},{"id":68,"group":"Wrath of the Lamb In-Game Secrets List","cat":"Game Completion Unlocks","title":"Curved Horn","type":"Trinket","how":"Complete the Cathedral as Judas"},{"id":69,"group":"Wrath of the Lamb In-Game Secrets List","cat":"Game Completion Unlocks","title":"Sacrificial Knife","type":"Collectible Item","how":"Complete the Cathedral as Eve"},{"id":70,"group":"Wrath of the Lamb In-Game Secrets List","cat":"Game Completion Unlocks","title":"Rainbow Baby <3","type":"Collectible Item","how":"Complete the Cathedral as ???"},{"id":71,"group":"Wrath of the Lamb In-Game Secrets List","cat":"Game Completion Unlocks","title":"Bloody Lust","type":"Collectible Item","how":"Defeat the boss in The Womb 2 with Samson"},{"id":73,"group":"Wrath of the Lamb In-Game Secrets List","cat":"Game Completion Unlocks","title":"Blood Rights","type":"Activated Item","how":"Complete Sheol as Samson"},{"id":72,"group":"Wrath of the Lamb In-Game Secrets List","cat":"Game Completion Unlocks","title":"Bloody Penny","type":"Trinket","how":"Complete the Cathedral as Samson"},{"id":74,"group":"Wrath of the Lamb In-Game Secrets List","cat":"Game Completion Unlocks","title":"The Polaroid","type":"Trinket","how":"Complete the Cathedral six times"},{"id":91,"group":"Wrath of the Lamb In-Game Secrets List","cat":"The Chest","title":"Isaac's Head","type":"Trinket","how":"Complete The Chest as Isaac"},{"id":92,"group":"Wrath of the Lamb In-Game Secrets List","cat":"The Chest","title":"Maggy's Faith","type":"Trinket","how":"Complete The Chest as Maggy"},{"id":96,"group":"Wrath of the Lamb In-Game Secrets List","cat":"The Chest","title":"Cain's Eye","type":"Trinket","how":"Complete The Chest as Cain"},{"id":93,"group":"Wrath of the Lamb In-Game Secrets List","cat":"The Chest","title":"Judas' Tongue","type":"Trinket","how":"Complete The Chest as Judas"},{"id":94,"group":"Wrath of the Lamb In-Game Secrets List","cat":"The Chest","title":"Eve's Bird Foot","type":"Trinket","how":"Complete The Chest as Eve","note":"The wiki notes that in v1.48 this trinket is unlocked by the other character (Eve and ??? are swapped)."},{"id":97,"group":"Wrath of the Lamb In-Game Secrets List","cat":"The Chest","title":"???'s Soul","type":"Trinket","how":"Complete The Chest as ???","note":"The wiki notes that in v1.48 this trinket is unlocked by the other character (Eve and ??? are swapped)."},{"id":95,"group":"Wrath of the Lamb In-Game Secrets List","cat":"The Chest","title":"Samson's Lock","type":"Trinket","how":"Complete The Chest as Samson"},{"id":76,"group":"Wrath of the Lamb In-Game Secrets List","cat":"Challenges","title":"The Candle","type":"Activated item","how":"Complete Challenge 1"},{"id":78,"group":"Wrath of the Lamb In-Game Secrets List","cat":"Challenges","title":"Lucky Toe!","type":"Trinket","how":"Complete Challenge 2"},{"id":77,"group":"Wrath of the Lamb In-Game Secrets List","cat":"Challenges","title":"Burnt Penny","type":"Trinket","how":"Complete Challenge 3"},{"id":79,"group":"Wrath of the Lamb In-Game Secrets List","cat":"Challenges","title":"Guppy's Tail","type":"Collectible item","how":"Complete Challenge 4"},{"id":81,"group":"Wrath of the Lamb In-Game Secrets List","cat":"Challenges","title":"A Fish Head","type":"Trinket","how":"Complete Challenge 5"},{"id":80,"group":"Wrath of the Lamb In-Game Secrets List","cat":"Challenges","title":"Mega Fetus","type":"Collectible item","how":"Complete Challenge 6"},{"id":82,"group":"Wrath of the Lamb In-Game Secrets List","cat":"Challenges","title":"Super Fan","type":"Collectible Item","how":"Complete Challenge 7"},{"id":83,"group":"Wrath of the Lamb In-Game Secrets List","cat":"Challenges","title":"Spider Butt","type":"Activated item","how":"Complete Challenge 8"},{"id":84,"group":"Wrath of the Lamb In-Game Secrets List","cat":"Challenges","title":"Counterfeit Coin","type":"Trinket","how":"Complete Challenge 9"},{"id":86,"group":"Wrath of the Lamb In-Game Secrets List","cat":"Challenges","title":"The Egg Sack","type":"Collectible item","how":"Complete Challenge 10"},{"id":85,"group":"Wrath of the Lamb In-Game Secrets List","cat":"Task Based","title":"Guppy's Hairball","type":"Collectible item","how":"Transform Isaac into a Cat (Guppy)"},{"id":75,"group":"Wrath of the Lamb In-Game Secrets List","cat":"Task Based","title":"Dad's Key","type":"Activated item","how":"Defeat ??? (complete The Chest) with any character"},{"id":90,"group":"Wrath of the Lamb In-Game Secrets List","cat":"Task Based","title":"!Platinum God!","type":"","how":"Collect 197/198 items in the game and unlock all the secrets"},{"id":null,"group":"Wrath of the Lamb In-Game Secrets List","cat":"Task Based","title":"Platinum God!","type":"New Backdrop","how":"New backdrop. The save data has no separate entry for it.","info":true},{"id":87,"group":"Wrath of the Lamb In-Game Secrets List","cat":"Task Based","title":"A Forgotten Horseman","type":"New Boss - Conquest","how":"Destroy 30 Tinted Rocks"},{"id":89,"group":"Wrath of the Lamb In-Game Secrets List","cat":"Task Based","title":"Something Icky!","type":"New boss - Triachnid","how":"Finish The Womb 16 times","meter":{"stat":"wins","target":16,"label":"Mom kills"}},{"id":98,"group":"Wrath of the Lamb In-Game Secrets List","cat":"Task Based","title":"The Left Hand","type":"Trinket","how":"Defeat Ultra Pride"},{"id":null,"group":"Wrath of the Lamb In-Game Secrets List","cat":"Task Based","title":"Stop Playing!","type":"New backdrop","how":"Kill Mom over 200 times (new backdrop). The save data has no entry for this one; it may not exist in this version.","info":true},{"id":106,"group":"Eternal Edition In-Game Secrets List","cat":"The Chest","title":"You Are Eternal (Isaac)","type":"","how":"Complete The Chest as Isaac in Hard Mode"},{"id":108,"group":"Eternal Edition In-Game Secrets List","cat":"The Chest","title":"You Are Eternal (Maggy)","type":"","how":"Complete The Chest as Maggy in Hard Mode"},{"id":109,"group":"Eternal Edition In-Game Secrets List","cat":"The Chest","title":"You Are Eternal (Cain)","type":"","how":"Complete The Chest as Cain in Hard Mode"},{"id":107,"group":"Eternal Edition In-Game Secrets List","cat":"The Chest","title":"You Are Eternal (Judas)","type":"","how":"Complete The Chest as Judas in Hard Mode"},{"id":110,"group":"Eternal Edition In-Game Secrets List","cat":"The Chest","title":"You Are Eternal (Eve)","type":"","how":"Complete The Chest as Eve in Hard Mode"},{"id":112,"group":"Eternal Edition In-Game Secrets List","cat":"The Chest","title":"You Are Eternal (???)","type":"","how":"Complete The Chest as ??? in Hard Mode"},{"id":111,"group":"Eternal Edition In-Game Secrets List","cat":"The Chest","title":"You Are Eternal (Samson)","type":"","how":"Complete The Chest as Samson in Hard Mode"},{"id":102,"group":"Eternal Edition In-Game Secrets List","cat":"Task Based","title":"Eternal Heart","type":"","how":"Defeat Mom's Heart/It Lives in Hard Mode"},{"id":113,"group":"Eternal Edition In-Game Secrets List","cat":"Task Based","title":"Eternal Life!!!","type":"","how":"Gain 7 health upgrades from Eternal Hearts"},{"id":100,"group":"Eternal Edition In-Game Secrets List","cat":"Task Based","title":"Eternal Satan","type":"","how":"Defeat Satan in Hard Mode"},{"id":101,"group":"Eternal Edition In-Game Secrets List","cat":"Task Based","title":"Eternal Isaac","type":"","how":"Defeat Isaac in Hard Mode"},{"id":103,"group":"Eternal Edition In-Game Secrets List","cat":"Task Based","title":"Eternal Blue...","type":"","how":"Defeat ??? in Hard Mode"},{"id":104,"group":"Eternal Edition In-Game Secrets List","cat":"Task Based","title":"Eternal Personalities","type":"","how":"Complete The Chest with every character in Hard Mode"},{"id":105,"group":"Eternal Edition In-Game Secrets List","cat":"Task Based","title":"!!Eternal God!!","type":"","how":"Unlock all other secrets (Platinum God and every other Eternal Edition secret)"},{"id":null,"group":"Eternal Edition In-Game Secrets List","cat":"Task Based","title":"Eternal God!","type":"New backdrop","how":"New backdrop for completing the game. The save data has no separate entry for it.","info":true},{"id":99,"group":"Eternal Edition In-Game Secrets List","cat":"Task Based","title":"Unnamed Eternal Edition secret","type":"","how":"Defeat Mom (the boss of The Depths 2) in Hard Mode. Not named on the wiki, but required for !!Eternal God!!"}];
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+    var ITEMS = [[1,"The Sad Onion"],[2,"The Inner Eye"],[3,"Spoon Bender"],[4,"Max's Head"],[5,"My Reflection"],[6,"Number one"],[7,"Blood of the Martyr"],[8,"Brother Bobby"],[9,"Skatole"],[10,"Halo of Flies"],[11,"1up!"],[12,"Magic Mushroom"],[13,"The Virus"],[14,"Roid Rage"],[15,"<3"],[16,"Raw Liver"],[17,"Skeleton Key"],[18,"A dollar!"],[19,"Boom!"],[20,"Transcendence"],[21,"The Compass"],[22,"Lunch"],[23,"Dinner"],[24,"Dessert"],[25,"Breakfast"],[26,"Rotten Meat"],[27,"Wooden Spoon"],[28,"The Belt"],[29,"Mom's Underwear"],[30,"Mom's Heels"],[31,"Mom's Lipstick"],[32,"Wire Coat hanger!"],[33,"The Bible"],[34,"The Book of Belial"],[35,"The Necronomicon"],[36,"The Poop!"],[37,"Mr. Boom!"],[38,"Tammy's Head"],[39,"Mom's Bra"],[40,"Kamikaze!"],[41,"Mom's Pad"],[42,"Bob's Rotten Head"],[43,"Pills here!"],[44,"Teleport!"],[45,"Yum Heart"],[46,"Lucky Foot"],[47,"Doctor's Remote"],[48,"Cupid's Arrow"],[49,"Shoop da Whoop!"],[50,"Steven"],[51,"Pentagram"],[52,"Dr Fetus"],[53,"Magneto"],[54,"Treasure Map"],[55,"Mom's Eye"],[56,"Lemon Mishap"],[57,"Distant Admiration"],[58,"Book of shadows"],[59,"Wiggle Worm"],[60,"The Ladder"],[61,"Tarot Card"],[62,"Charm of the vampire"],[63,"The Battery"],[64,"Steam Sale"],[65,"Anarchist Cookbook"],[66,"The Hourglass"],[67,"Sister Maggy"],[68,"Technology"],[69,"Chocolate Milk"],[70,"Growth Hormones"],[71,"Mini Mush"],[72,"Rosary"],[73,"Cube of Meat"],[74,"A Quarter"],[75,"PHD"],[76,"Xray-Vision"],[77,"My little Unicorn"],[78,"Book of Revelations"],[79,"The Mark"],[80,"The Pact"],[81,"Dead Cat"],[82,"Lord of the Pit"],[83,"The Nail"],[84,"We need to go deeper!"],[85,"Deck of Cards"],[86,"Monstro's Tooth"],[87,"Loki's Horns"],[88,"Lil Chubby"],[89,"Spider Bite"],[90,"The Small Rock"],[91,"Spelunker Hat"],[92,"Super Bandage"],[93,"The Gamekid"],[94,"Sack of pennies"],[95,"Robo-Baby"],[96,"Little Chad"],[97,"The Book of Sin"],[98,"The Relic"],[99,"Little Gish"],[100,"Little Steve"],[101,"The Halo"],[102,"Mom's Bottle of Pills"],[103,"The common cold"],[104,"The Parasite"],[105,"The Dice"],[106,"Mr. Mega"],[107,"The Pinking Shears"],[108,"The Wafer"],[109,"Money = Power"],[110,"Mom's Contacts"],[111,"The Bean"],[112,"Guardian Angel"],[113,"Demon Baby"],[114,"Mom's Knife"],[115,"Ouija Board"],[116,"9 Volt"],[117,"Dead Bird"],[118,"Brimstone"],[119,"Blood Bag"],[120,"Odd Mushroom"],[121,"Odd Mushroom"],[122,"Whore of Babylon"],[123,"Monster Manuel"],[124,"Dead Sea Scrolls"],[125,"Bobby - Bomb"],[126,"Razor Blade"],[127,"Forget Me Now"],[128,"Forever alone"],[129,"Bucket of Lard"],[130,"A Pony"],[131,"Bomb Bag"],[132,"A Lump of Coal"],[133,"Guppy's Paw"],[134,"Guppy's Tail"],[135,"IV Bag"],[136,"Best Friend"],[137,"Remote Detonator"],[138,"Stigmata"],[139,"Mom's Purse"],[140,"Bob's Curse"],[141,"Pageant Boy"],[142,"Scapular"],[143,"Speed Ball"],[144,"Bum friend"],[145,"Guppy's Head"],[146,"Prayer Card"],[147,"Notched Axe"],[148,"Infestation"],[149,"Ipecac"],[150,"Tough love"],[151,"The Mulligan"],[152,"Technology 2"],[153,"Mutant Spider"],[154,"Chemical peel"],[155,"The Peeper!"],[156,"Habit"],[157,"Bloody Lust"],[158,"Crystal Ball"],[159,"Spirit of the night"],[160,"Crack the Sky"],[161,"Ankh"],[162,"Celtic cross"],[163,"Ghost Baby"],[164,"The Candle"],[165,"Cat-o-nine-tails"],[166,"D20"],[167,"Harlequin baby"],[168,"Epic Fetus"],[169,"Polyphemus"],[170,"Daddy longlegs"],[171,"Spider Butt"],[172,"Sacrificial Dagger"],[173,"Mitre"],[174,"Rainbow Baby"],[175,"Dad's Key"],[176,"Stem cells"],[177,"Portable Slot!"],[178,"Holy Water"],[179,"Fate"],[180,"The Black Bean"],[181,"White Pony"],[182,"Sacred Heart"],[183,"Tooth Picks"],[184,"Holy Grail"],[185,"Dead Dove"],[186,"Blood Rights"],[187,"Guppy's Hairball"],[188,"Abel"],[189,"SMB Super Fan!"],[190,"Pyro"],[191,"3 Dollar bill"],[192,"Telepathy for Dummies"],[193,"MEAT!"],[194,"Magic 8 ball"],[195,"Mom's Coin Purse"],[196,"Squeezy"],[197,"Jesus Juice"],[198,"BOX"]];
+  var ITEM_SECRET = {"29":81,"35":68,"36":12,"42":78,"45":1,"46":2,"47":74,"49":72,"50":77,"54":91,"55":92,"56":93,"57":94,"58":95,"59":96,"60":97,"61":98,"74":10,"78":7,"86":19,"87":20,"88":21,"89":13,"91":14,"93":33,"94":27,"95":28,"96":32,"97":29,"98":26,"99":30,"100":31,"101":34,"102":36,"103":37,"104":40,"105":38,"106":35,"107":39,"108":43,"109":44,"110":47,"111":46,"112":59,"113":61,"114":55,"117":56,"123":63,"126":58,"127":62,"131":60,"134":79,"157":71,"162":66,"164":76,"166":65,"170":86,"171":83,"172":69,"174":70,"175":75,"186":73,"187":85,"188":67,"189":82};
+  var ITEM_LIST = ITEMS.map(function (r) { return { id: r[0], title: r[1] }; });
+  var state = { found: new Set(), items: new Set(), view: 'secrets', filter: 'miss', cat: 'all', q: '', stats: {} };
+  var CHECK = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8"/></svg>';
+
+  /* ---------- load ---------- */
+  var drop = $('drop'), file = $('file');
+  drop.addEventListener('click', function () { file.click(); });
+  $('again').addEventListener('click', function () { file.click(); });
+  file.addEventListener('change', function () { if (file.files[0]) load(file.files[0]); file.value = ''; });
+  ['dragenter', 'dragover'].forEach(function (e) { drop.addEventListener(e, function (ev) { ev.preventDefault(); drop.classList.add('over'); }); });
+  ['dragleave', 'drop'].forEach(function (e) { drop.addEventListener(e, function (ev) { ev.preventDefault(); drop.classList.remove('over'); }); });
+  document.addEventListener('dragover', function (ev) { ev.preventDefault(); });
+  document.addEventListener('drop', function (ev) { ev.preventDefault(); if (ev.dataTransfer && ev.dataTransfer.files[0]) load(ev.dataTransfer.files[0]); });
+
+  function fail(t) { var e = $('err'); e.hidden = false; e.textContent = t; $('intro').hidden = false; }
+
+  function load(f) {
+    f.arrayBuffer().then(function (ab) {
+      var s;
+      try { s = IsaacConv.parse(new Uint8Array(ab)); }
+      catch (e) { return fail('Couldn’t read “' + f.name + '”. Make sure it is so.sol or isaac_eternal_save.sol.'); }
+      $('err').hidden = true;
+      state.found = new Set(); state.items = new Set();
+      s.cols.items.forEach(function (v, i) { if (v === true && i >= 1 && i <= ITEM_LIST.length) state.items.add(i); });
+      s.lock.items.forEach(function (v, i) { if (v === true && i >= 1 && i <= 113) state.found.add(i); });
+      var items = 0; s.cols.items.forEach(function (v) { if (v === true) items++; });
+      state.stats = { deads: s.deads || 0, wins: s.wins || 0, items: items };
+      $('fname').textContent = f.name;
+      $('intro').hidden = true; $('app').hidden = false;
+      setView('secrets', true);
+    });
+  }
+
+  /* ---------- structure ---------- */
+  var groups = [];
+  SECRETS.forEach(function (s) {
+    var g = groups.filter(function (x) { return x.name === s.group; })[0];
+    if (!g) { g = { name: s.group, cats: [] }; groups.push(g); }
+    if (g.cats.indexOf(s.cat) < 0) g.cats.push(s.cat);
+  });
+  var sel = $('cat');
+  (function () {
+    var all = document.createElement('option'); all.value = 'all'; all.textContent = 'All categories'; sel.appendChild(all);
+    groups.forEach(function (g) {
+      var og = document.createElement('optgroup'); og.label = g.name;
+      g.cats.forEach(function (c) { var o = document.createElement('option'); o.value = g.name + '|' + c; o.textContent = c; og.appendChild(o); });
+      sel.appendChild(og);
+    });
+  })();
+  sel.addEventListener('change', function () { state.cat = sel.value; render(); });
+  $('q').addEventListener('input', function (e) { state.q = e.target.value.trim().toLowerCase(); render(); });
+  document.querySelectorAll('.toolrow .seg button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      state.filter = b.dataset.f;
+      document.querySelectorAll('.toolrow .seg button').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+      render();
+    });
+  });
+
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function shortGroup(n) { return n.replace(' In-Game Secrets List', '').replace(/^In-Game Secrets List$/, 'Original game'); }
+
+  function idMatch(q, id) {
+    // "12", "#12", "10-20", "1, 5, 9-12"
+    var parts = q.split(/[,\s]+/).filter(Boolean);
+    if (!parts.length) return null;
+    var any = false;
+    for (var i = 0; i < parts.length; i++) {
+      var m = /^#?(\d+)(?:\s*-\s*#?(\d+))?$/.exec(parts[i]);
+      if (!m) return null;                       // not a number query
+      var a = Number(m[1]), b = m[2] ? Number(m[2]) : a;
+      if (id >= Math.min(a, b) && id <= Math.max(a, b)) any = true;
+    }
+    return any;
+  }
+
+  function matches(s) {
+    if (!state.q) return true;
+    var byId = idMatch(state.q, s.id || -1);
+    if (byId !== null) return !!s.id && byId;
+    return s.title.toLowerCase().indexOf(state.q.replace(/^#/, '')) >= 0;
+  }
+
+  var SECRET_BY_ID = {};
+  SECRETS.forEach(function (s) { if (s.id) SECRET_BY_ID[s.id] = s; });
+  document.querySelectorAll('.tabseg button').forEach(function (b) {
+    b.addEventListener('click', function () { setView(b.dataset.v); });
+  });
+  function setView(v, first) {
+    state.view = v;
+    var isItems = v === 'items', total = isItems ? ITEM_LIST.length : 113;
+    document.querySelectorAll('.tabseg button').forEach(function (x) { x.setAttribute('aria-pressed', String(x.dataset.v === v)); });
+    $('cat').hidden = isItems; $('groups').hidden = isItems;
+    $('tot').textContent = '/ ' + total + (isItems ? ' items' : ' secrets');
+    $('pb').setAttribute('aria-valuemax', total);
+    $('pb').setAttribute('aria-label', isItems ? 'Items found' : 'Secrets found');
+    render(first);
+  }
+
+  function renderItems(first) {
+    var found = state.items.size, total = ITEM_LIST.length;
+    $('n').textContent = found;
+    $('pf').style.width = (found / total * 100) + '%';
+    $('pb').setAttribute('aria-valuenow', found);
+    $('c-miss').textContent = total - found; $('c-got').textContent = found; $('c-all').textContent = total;
+    var shown = ITEM_LIST.filter(function (it) {
+      var got = state.items.has(it.id);
+      if (state.filter === 'miss' && got) return false;
+      if (state.filter === 'got' && !got) return false;
+      return matches(it);
+    });
+    $('result').textContent = shown.length + (shown.length === 1 ? ' item' : ' items') + ' shown';
+    var list = $('list'); list.textContent = '';
+    if (!shown.length) {
+      list.appendChild(el('div', 'empty', (state.filter === 'miss' && !state.q) ? 'Nothing missing. You have all ' + total + ' items.' : 'No items match these filters.'));
+      return;
+    }
+    var grid = el('div', 'grid'); list.appendChild(grid);
+    shown.forEach(function (it) {
+      var got = state.items.has(it.id);
+      var card = el('article', 'card ' + (got ? 'found' : 'miss'));
+      var mark = el('div', 'mark'); if (got) mark.innerHTML = CHECK; mark.setAttribute('aria-hidden', 'true'); card.appendChild(mark);
+      var body = el('div'); body.appendChild(el('h4', 'name', it.title));
+      var status = el('span'); status.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)';
+      status.textContent = got ? 'Collected' : 'Not collected'; body.appendChild(status);
+      var sid = ITEM_SECRET[it.id];
+      if (!got && sid && SECRET_BY_ID[sid]) {
+        var sec = SECRET_BY_ID[sid];
+        body.appendChild(el('p', 'note', state.found.has(sid)
+          ? 'Available: you already unlocked it (secret #' + sid + ').'
+          : 'Unlock first: ' + sec.title + ' (secret #' + sid + ').'));
+      }
+      card.appendChild(body); card.appendChild(el('span', 'num', '#' + it.id));
+      grid.appendChild(card);
+    });
+    if (first) window.scrollTo(0, 0);
+  }
+
+  function render(first) {
+    if (state.view === 'items') return renderItems(first);
+    var found = state.found.size;
+    $('n').textContent = found;
+    $('pf').style.width = (found / 113 * 100) + '%';
+    $('pb').setAttribute('aria-valuenow', found);
+    $('c-miss').textContent = 113 - found; $('c-got').textContent = found; $('c-all').textContent = 113;
+
+    var gbox = $('groups'); gbox.textContent = '';
+    groups.forEach(function (g) {
+      var tot = 0, got = 0;
+      SECRETS.forEach(function (s) { if (!s.info && s.group === g.name) { tot++; if (state.found.has(s.id)) got++; } });
+      var d = el('div', 'g'); d.appendChild(el('b', '', shortGroup(g.name))); d.appendChild(document.createTextNode(got + ' of ' + tot));
+      var b = el('div', 'bar'); var i = document.createElement('i'); i.style.width = (tot ? got / tot * 100 : 0) + '%'; b.appendChild(i); d.appendChild(b); gbox.appendChild(d);
+    });
+    var chips = $('chips'); chips.textContent = '';
+    [['Deaths', state.stats.deads], ['Mom kills', state.stats.wins], ['Items', state.stats.items]].forEach(function (r) {
+      var c = el('span', 'chip-s', r[0] + ' '); c.appendChild(el('b', '', String(r[1]))); chips.appendChild(c);
+    });
+
+    var shown = SECRETS.filter(function (s) {
+      if (s.info) { if (state.filter !== 'all') return false; }
+      else {
+        var got = state.found.has(s.id);
+        if (state.filter === 'miss' && got) return false;
+        if (state.filter === 'got' && !got) return false;
+      }
+      if (state.cat !== 'all' && (s.group + '|' + s.cat) !== state.cat) return false;
+      return matches(s);
+    });
+    var real = shown.filter(function (s) { return !s.info; }).length;
+    $('result').textContent = real + (real === 1 ? ' secret' : ' secrets') + ' shown';
+
+    var list = $('list'); list.textContent = '';
+    if (!shown.length) {
+      var msg = (state.filter === 'miss' && !state.q && state.cat === 'all') ? 'Nothing missing. You have all 113 secrets.' : 'No secrets match these filters.';
+      list.appendChild(el('div', 'empty', msg)); return;
+    }
+    var secTotals = {}, secFound = {}, grpTotals = {}, grpFound = {};
+    SECRETS.forEach(function (s) {
+      if (s.info) return;
+      var k = s.group + '|' + s.cat;
+      secTotals[k] = (secTotals[k] || 0) + 1; grpTotals[s.group] = (grpTotals[s.group] || 0) + 1;
+      if (state.found.has(s.id)) { secFound[k] = (secFound[k] || 0) + 1; grpFound[s.group] = (grpFound[s.group] || 0) + 1; }
+    });
+    var curG = null, curC = null, grid = null;
+    shown.forEach(function (s) {
+      if (s.group !== curG) {
+        curG = s.group; curC = null;
+        var h = el('h2', 'grp', shortGroup(s.group)); h.appendChild(el('small', '', (grpFound[s.group] || 0) + ' of ' + grpTotals[s.group] + ' found')); list.appendChild(h);
+      }
+      var key = s.group + '|' + s.cat;
+      if (key !== curC) {
+        curC = key;
+        var h3 = el('h3', 'sec', s.cat); h3.appendChild(el('small', '', (secFound[key] || 0) + ' / ' + secTotals[key]));
+        list.appendChild(h3); grid = el('div', 'grid'); list.appendChild(grid);
+      }
+      var got = !s.info && state.found.has(s.id);
+      var card = el('article', 'card ' + (s.info ? 'info' : (got ? 'found' : 'miss')));
+      var mark = el('div', 'mark'); if (got) mark.innerHTML = CHECK; mark.setAttribute('aria-hidden', 'true'); card.appendChild(mark);
+      var body = el('div');
+      var name = el('h4', 'name', s.title); if (s.type) name.appendChild(el('span', 'type', s.type));
+      body.appendChild(name);
+      var status = el('span'); status.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)';
+      status.textContent = s.info ? 'Not in save data' : (got ? 'Found' : 'Missing'); body.appendChild(status);
+      body.appendChild(el('p', 'how', s.how));
+      if (s.note) body.appendChild(el('p', 'note', s.note));
+      if (s.meter && !got) {
+        var cur = state.stats[s.meter.stat] || 0, tg = s.meter.target;
+        var m = el('div', 'meter', s.meter.label + ': ' + Math.min(cur, tg) + ' / ' + tg);
+        var b = el('div', 'bar'); var i2 = document.createElement('i'); i2.style.width = Math.min(100, cur / tg * 100) + '%'; b.appendChild(i2); m.appendChild(b); body.appendChild(m);
+      }
+      card.appendChild(body);
+      if (s.id) card.appendChild(el('span', 'num', '#' + s.id));
+      grid.appendChild(card);
+    });
+    if (first) window.scrollTo(0, 0);
+  }
+})();
+</script>
+</body>
+</html>
